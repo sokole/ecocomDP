@@ -160,15 +160,28 @@ map_neon.ecocomdp.20120.001.001 <- function(
       "publicationDate"))
   
   
-  
+
   # location ----
   # get relevant location info from the data
   table_location_raw <- inv_fielddata %>%
-    dplyr::select(domainID, siteID, namedLocation, decimalLatitude,
-                  aquaticSiteType,
-                  decimalLongitude, elevation) %>%
+    dplyr::select(domainID, siteID, namedLocation, 
+                  decimalLatitude, decimalLongitude, elevation, 
+                  geodeticDatum, aquaticSiteType, collectDate) %>%
+    dplyr::group_by(namedLocation) %>% 
+    #keep most recent loc rec
+    dplyr::mutate(max_date = collectDate %>% lubridate::as_date() %>% max()) %>%
+    dplyr::filter(
+      lubridate::as_date(collectDate) == lubridate::as_date(max_date)) %>%  
+    #if multiple recs on the most recent day, take the first one
+    dplyr::slice_head(n = 1) %>%
     dplyr::distinct() %>%
-    dplyr::filter(namedLocation %in% table_observation$location_id)
+    dplyr::ungroup() %>%
+    dplyr::select(-c(max_date, collectDate)) 
+  
+  # # check for dup namedLocation recs
+  # table_location_raw$namedLocation[which(table_location_raw$namedLocation %>% duplicated())]
+  
+  
   
   # create a location table, which has the lat long for each NEON site included in the data set
   # start with the inv_fielddata table and pull out latitude, longitude, and elevation for each NEON site that occurs in the data

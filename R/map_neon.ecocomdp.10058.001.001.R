@@ -108,14 +108,24 @@ map_neon.ecocomdp.10058.001.001 <- function(
   # NOTE: we have not cleaned species names; users need to do it
   
  
+
   
   #location ----
   table_location_raw <- data_plant %>%
     dplyr::select(domainID, siteID, plotID, namedLocation, 
                   decimalLatitude, decimalLongitude, elevation,
                   plotType, 
-                  nlcdClass, geodeticDatum) %>%
-    dplyr::distinct() 
+                  nlcdClass, geodeticDatum, endDate) %>%
+    dplyr::group_by(namedLocation) %>% 
+    dplyr::mutate(max_date = endDate %>% lubridate::as_date() %>% max()) %>%
+    dplyr::filter(
+      lubridate::as_date(endDate) == lubridate::as_date(max_date)) %>%
+    dplyr::distinct() %>%
+    dplyr::ungroup() %>%
+    dplyr::select(-c(max_date, endDate)) 
+   
+  # # check for dup namedLocation recs
+  # table_location_raw$namedLocation[which(table_location_raw$namedLocation %>% duplicated())]
   
   table_location <- make_neon_location_table(
     loc_info = table_location_raw,
@@ -127,6 +137,9 @@ map_neon.ecocomdp.10058.001.001 <- function(
     ancillary_var_names = c("namedLocation", "plotType", "nlcdClass", "geodeticDatum"))
   
   
+  
+  
+
   # taxon ----
   table_taxon <- data_plant %>%
     dplyr::select(taxonID, taxonRank, scientificName, identificationReferences) %>%
