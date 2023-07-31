@@ -328,34 +328,6 @@ map_neon.ecocomdp.20107.001.001 <- function(
   
   
   
-  #location ----
-  table_location_raw <- data_fish %>%
-    dplyr::select(domainID, siteID, namedLocation, 
-                  decimalLatitude, decimalLongitude, elevation, 
-                  geodeticDatum, aquaticSiteType, endDate) %>%
-    dplyr::group_by(namedLocation) %>% 
-    dplyr::mutate(max_date = endDate %>% lubridate::as_date() %>% max()) %>%
-    dplyr::filter(
-      lubridate::as_date(endDate) == lubridate::as_date(max_date)) %>%  #keep most recent loc rec
-    dplyr::slice_head(n = 1) %>% #if multiple recs on the most recent day, take the first one
-    dplyr::distinct() %>%
-    dplyr::ungroup() %>%
-    dplyr::select(-c(max_date, endDate)) 
-  
-  # # check for dup namedLocation recs
-  # table_location_raw$namedLocation[which(table_location_raw$namedLocation %>% duplicated())]
-  
-  table_location <- make_neon_location_table(
-    loc_info = table_location_raw,
-    loc_col_names = c("domainID", "siteID", "namedLocation"))
-  
-  table_location_ancillary <- make_neon_ancillary_location_table(
-    loc_info = table_location_raw,
-    loc_col_names = c("domainID", "siteID", "namedLocation"),
-    ancillary_var_names = c("namedLocation", "aquaticSiteType", "geodeticDatum"))
-  
-  
-  
   # observation ----
   
   my_package_id <- paste0(
@@ -436,7 +408,36 @@ map_neon.ecocomdp.20107.001.001 <- function(
   
   
   
+
+  #location ----
+  table_location_raw <- data_fish %>%
+    dplyr::select(domainID, siteID, namedLocation, 
+                  decimalLatitude, decimalLongitude, elevation, 
+                  geodeticDatum, aquaticSiteType, endDate) %>%
+    dplyr::group_by(namedLocation) %>% 
+    dplyr::mutate(max_date = endDate %>% lubridate::as_date() %>% max(na.rm = TRUE)) %>%
+    dplyr::filter(lubridate::as_date(endDate) == lubridate::as_date(max_date)) %>%
+      #keep most recent loc rec
+    dplyr::slice_head(n = 1) %>% #if multiple recs on the most recent day, take the first one
+    dplyr::distinct() %>%
+    dplyr::ungroup() %>%
+    dplyr::select(-c(max_date, endDate)) %>%
+    dplyr::filter(namedLocation %in% table_observation$location_id)
   
+  # # check for dup namedLocation recs
+  # table_location_raw$namedLocation[which(table_location_raw$namedLocation %>% duplicated())]
+  
+  table_location <- make_neon_location_table(
+    loc_info = table_location_raw,
+    loc_col_names = c("domainID", "siteID", "namedLocation"))
+  
+  table_location_ancillary <- make_neon_ancillary_location_table(
+    loc_info = table_location_raw,
+    loc_col_names = c("domainID", "siteID", "namedLocation"),
+    ancillary_var_names = c("namedLocation", "aquaticSiteType", "geodeticDatum"))
+  
+  
+
   
   # taxon ----
   

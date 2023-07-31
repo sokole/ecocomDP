@@ -285,7 +285,8 @@ tab_flat$value %>% log10() %>% hist()
 
 my_result_read_data <- read_data(
   id = "neon.ecocomdp.20107.001.001",
-  site = c(c('ARIK','LECO')),
+  # site = c(c('ARIK','LECO')),
+  site = "PRPO",
   startdate = "2016-01",
   enddate = "2018-11",
   token = Sys.getenv("NEON_TOKEN"),
