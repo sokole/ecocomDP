@@ -82,7 +82,7 @@ read_data <- function(id = NULL, parse_datetime = TRUE,
   
   # Validate input arguments --------------------------------------------------
 
-  validate_arguments(fun.name = "read_data", fun.args = as.list(environment()))
+  # validate_arguments(fun.name = "read_data", fun.args = as.list(environment()))
 
   # Parameterize --------------------------------------------------------------
 
@@ -112,12 +112,26 @@ read_data <- function(id = NULL, parse_datetime = TRUE,
         neon.data.save.dir = neon.data.save.dir,
         neon.data.read.path = neon.data.read.path,
         ...)
+      
+      
+      # ensure datetime is in Date format
+      if("tables" %in% names(d)){
+        d$tables$observation$datetime <- 
+          d$tables$observation$datetime %>% as.Date(format = "%Y-%m-%d")
+      }else{
+        d[[1]]$tables$observation$datetime <- 
+          d[[1]]$tables$observation$datetime %>% as.Date(format = "%Y-%m-%d")      
+      }
+      
     }
     d <- list(d = d)
     names(d) <- id
   } else {                  # From file
     d <- read_from_files(from)
   }
+  
+  
+
   
   # Modify --------------------------------------------------------------------
   
@@ -150,6 +164,8 @@ read_data <- function(id = NULL, parse_datetime = TRUE,
     }
   }
 
+  
+  
   # Coerce column classes to ecocomDP specifications. NOTE: This same 
   # process is applied to read_from_files(). Any update here should be
   # duplicated there. A function is not used in order to minimize data object
@@ -176,6 +192,9 @@ read_data <- function(id = NULL, parse_datetime = TRUE,
       }
     }
   }
+
+  
+  
   
   # Append package_id to primary keys to ensure referential integrity (except
   # package_id, appending package_id to package_id changes the field definition
@@ -204,6 +223,8 @@ read_data <- function(id = NULL, parse_datetime = TRUE,
     }
   }
   
+  
+
   # Return datetimes as character
   if (!isTRUE(parse_datetime)) {
     for (id in names(d)) {
@@ -217,6 +238,8 @@ read_data <- function(id = NULL, parse_datetime = TRUE,
       }
     }
   }
+
+  
 
   # Control returned structure ------------------------------------------------
   
