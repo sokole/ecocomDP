@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# ecocomDP
+# ecocomDP <a href="https://ediorg.github.io/ecocomDP/"><img src="man/figures/logo.png" align="right" height="138" /></a>
 
 <!-- badges: start -->
 
@@ -35,19 +35,19 @@ remotes::install_github("EDIorg/ecocomDP", ref = "development")
 
 ## Usage
 
--   [Create ecocomDP
-    Data](https://ediorg.github.io/ecocomDP/articles/create.html)
--   [Use ecocomDP
-    Data](https://ediorg.github.io/ecocomDP/articles/use.html)
--   [Convert ecocomDP Data to Another Model
-    Format](https://ediorg.github.io/ecocomDP/articles/convert.html)
+- [Create ecocomDP
+  Data](https://ediorg.github.io/ecocomDP/articles/create.html)
+- [Use ecocomDP
+  Data](https://ediorg.github.io/ecocomDP/articles/use.html)
+- [Convert ecocomDP Data to Another Model
+  Format](https://ediorg.github.io/ecocomDP/articles/convert.html)
 
 ## Model documentation
 
--   [Model
-    Overview](https://ediorg.github.io/ecocomDP/articles/model_overview.html)
--   [Shared Practices for Creating ecocomDP
-    Data](https://ediorg.github.io/ecocomDP/articles/shared_practices_create.html)
+- [Model
+  Overview](https://ediorg.github.io/ecocomDP/articles/model_overview.html)
+- [Shared Practices for Creating ecocomDP
+  Data](https://ediorg.github.io/ecocomDP/articles/shared_practices_create.html)
 
 ## Getting help
 

@@ -35,24 +35,23 @@ map_neon.ecocomdp.20107.001.001 <- function(
   }
   
   
-  
+  # get fish taxon table ----
   # get taxon table from API, may take a few minutes to load
   # Fish electrofishing, gill netting, and fyke netting counts
   # http://data.neonscience.org/data-product-view?dpCode=DP1.20107.001
-  full_taxon_fish <- neonUtilities::getTaxonTable(
-    taxonType = "FISH", token = my_token) 
+  full_taxon_fish <- neonOS::getTaxonList(
+    taxonType = "FISH", token = my_token)
   
   # -- make ordered taxon_rank list for a reference (subspecies is smallest rank, kingdom is largest)
   # a much simple table with useful levels of taxonomic resolution;
   # this might not be needed if taxon rank is extracted  from scientific names using stringr functions
-  taxon_rank_fish <- c('superclass', 'class', 'subclass', 'infraclass', 'superorder',
-                       'order', 'suborder', 'infraorder', 'section', 'subsection',
-                       'superfamily', 'family', 'subfamily', 'tribe', 'subtribe', 'genus',
-                       'subgenus','speciesGroup','species','subspecies') %>% rev() # get the reversed version
+  taxon_rank_fish <- c(
+    'superclass', 'class', 'subclass', 'infraclass', 'superorder',
+    'order', 'suborder', 'infraorder', 'section', 'subsection',
+    'superfamily', 'family', 'subfamily', 'tribe', 'subtribe', 'genus',
+    'subgenus','speciesGroup','species','subspecies') %>% rev() # get the reversed version
   
   
-  
-
   # get data FISH data from NEON api
   all_fish <- neon.data.list
   
@@ -61,17 +60,26 @@ map_neon.ecocomdp.20107.001.001 <- function(
   
   # this joins reach-level data, you can just join by any two of these, and the results are the same, dropping the unique ID
   # join field data table with the pass tables from all_fish
-  fsh_dat1 <- dplyr::left_join(x = all_fish$fsh_perPass, y = all_fish$fsh_fieldData, by = c('reachID', "siteID")) %>%
+  fsh_dat1 <- dplyr::left_join(
+    all_fish$fsh_perPass, 
+    all_fish$fsh_fieldData, 
+    by = c("reachID", "siteID"),
+    suffix = c("_perPass","_filedData"),
+    multiple = "all") %>%
     dplyr::filter(is.na(samplingImpractical) | samplingImpractical == "") %>% #remove records where fish couldn't be collected, both na's and blank data
     tidyr::as_tibble()
   
   # get rid of dupe col names and .x suffix
-  fsh_dat1 <- fsh_dat1[, !grepl('\\.y', names(fsh_dat1))]
-  names(fsh_dat1) <- gsub('\\.x', '', names(fsh_dat1))
+  fsh_dat1 <- fsh_dat1[, !grepl("_filedData", names(fsh_dat1))]
+  names(fsh_dat1) <- gsub("_perPass", "", names(fsh_dat1))
   
   # add individual fish counts; perFish data = individual level per each specimen captured
   # this joins reach-level field data with individual fish measures
-  fsh_dat_indiv <- dplyr::left_join(all_fish$fsh_perFish, fsh_dat1, by = "eventID") %>%
+  fsh_dat_indiv <- dplyr::left_join(
+    all_fish$fsh_perFish, 
+    fsh_dat1, 
+    by = "eventID", 
+    multiple = "all") %>%
     tidyr::as_tibble()
   
   # get rid of dupe col names and .x suffix
@@ -86,7 +94,9 @@ map_neon.ecocomdp.20107.001.001 <- function(
   
   # add bulk fish counts; bulk count data = The number of fish counted during bulk processing in each pass
   # this will join all the reach-level field data with the species data with bulk counts
-  fsh_dat_bulk <- dplyr::left_join(all_fish$fsh_bulkCount, fsh_dat1, by = "eventID") %>%
+  fsh_dat_bulk <- dplyr::left_join(
+    all_fish$fsh_bulkCount, 
+    fsh_dat1, by = "eventID") %>%
     tidyr::as_tibble()
   
   # get rid of dupe col names and .x suffix
@@ -100,8 +110,11 @@ map_neon.ecocomdp.20107.001.001 <- function(
   
   # add taxonRank into fsh_dat from full_taxon_fish
   # join the above with bulkCount dataset
-  fsh_dat_bulk <- dplyr::left_join(fsh_dat_bulk, dplyr::select(full_taxon_fish, taxonID, scientificName, taxonRank),
-                                   by = c("taxonID", "scientificName"))
+  fsh_dat_bulk <- dplyr::left_join(
+    fsh_dat_bulk, 
+    dplyr::select(
+      full_taxon_fish, taxonID, scientificName, taxonRank),
+    by = c("taxonID", "scientificName"))
   
   # combine indiv and bulk counts
   fsh_dat <- dplyr::bind_rows(fsh_dat_indiv, fsh_dat_bulk)
@@ -112,7 +125,9 @@ map_neon.ecocomdp.20107.001.001 <- function(
   fsh_dat$count <- ifelse(is.na(fsh_dat$bulkFishCount), 1, fsh_dat$bulkFishCount)
   
   # get all records that have rank upto subspecies, variable taxonomic resolution
-  fsh_dat_fine <- dplyr::filter(fsh_dat, taxonRank %in% c("class", "family", "genus", "order", "phylum", "species", "subgenus", "subspecies"))
+  fsh_dat_fine <- dplyr::filter(
+    fsh_dat, 
+    taxonRank %in% c("class", "family", "genus", "order", "phylum", "species", "subgenus", "subspecies"))
   
   # select passes with no fish were caught
   no_fsh <- dplyr::filter(all_fish$fsh_perPass, targetTaxaPresent == "N")
@@ -132,42 +147,79 @@ map_neon.ecocomdp.20107.001.001 <- function(
                             substr(no_fsh2$eventID, 1, 16),
                             no_fsh2$reachID)
   
-  # add a count variables, which should be zero since these are the reaches with zero fish captures
-  no_fsh2 <- no_fsh2 %>% dplyr::mutate(count =  rep_len(0, length.out = nrow(no_fsh2)),
-                                       scientificName = NA, taxonID = NA) %>%
-    dplyr::mutate( dplyr::across(c("scientificName", "taxonID"), ~as.character(.)))
+  # add a count variables, which should be zero since these are the reaches 
+  # with zero fish captures
+  no_fsh2 <- no_fsh2 %>% 
+    dplyr::mutate(
+      count = rep_len(0, length.out = nrow(no_fsh2)),
+      scientificName = NA, taxonID = NA) %>%
+    dplyr::mutate(
+      dplyr::across(c("scientificName", "taxonID"), ~as.character(.)))
   
   # join the no_fish sampling sessions to the sampling sessions with fish
   if(nrow(no_fsh2) > 0) fsh_dat_fine <- dplyr::bind_rows(fsh_dat_fine, no_fsh2)
   
   # need to convert POSIXct format into as.character and then back to date-time format
   # then, fill in missing site ID info and missing startDate into
-  fsh_dat_fine$startDate <- dplyr::if_else(is.na(fsh_dat_fine$startDate),
-                                           lubridate::as_datetime(substr(as.character(fsh_dat_fine$passStartTime), 1, 10)), fsh_dat_fine$startDate) # 1-10: number of characters on date
-  fsh_dat_fine$siteID <- dplyr::if_else(is.na(fsh_dat_fine$siteID),
-                                        substr(fsh_dat_fine$eventID, 1, 4), fsh_dat_fine$siteID) # four characters on site
+  fsh_dat_fine$startDate <- dplyr::if_else(
+    is.na(fsh_dat_fine$startDate),
+    lubridate::as_datetime(substr(as.character(fsh_dat_fine$passStartTime), 1, 10)), 
+    fsh_dat_fine$startDate) # 1-10: number of characters on date
+  
+  fsh_dat_fine$siteID <- dplyr::if_else(
+    is.na(fsh_dat_fine$siteID),
+    substr(fsh_dat_fine$eventID, 1, 4), 
+    fsh_dat_fine$siteID) # four characters on site
   
   # grouping vars for aggregating density measurements
-  my_grouping_vars <- c('domainID','siteID','aquaticSiteType','namedLocation',
-                        'startDate', 'endDate', 'reachID','eventID','samplerType', 
-                        'aquaticSiteType', 'netSetTime', 'netEndTime',
-                        'netDeploymentTime', 'netLength', 'netDepth', 'fixedRandomReach',
-                        'measuredReachLength','efTime', 'efTime2',
-                        "passStartTime", "passEndTime", 'netDeploymentTime', 
-                        'scientificName', 'taxonID', 'passNumber', 'taxonRank', 'targetTaxaPresent')
-  # added a few metrics to quantify catch per unit effort such as 'passNumber', efish time, net deployment time
-  # aggregate densities for each species group, pull out year and month from StartDate
+  my_grouping_vars <- c(
+    'domainID','siteID','aquaticSiteType','namedLocation',
+    'startDate', 'endDate', 'reachID','eventID','samplerType', 
+    'aquaticSiteType', 
+    'netSetTime', 'netEndTime',
+    'netDeploymentTime', 'netLength', 'netDepth', 'fixedRandomReach',
+    'measuredReachLength','efTime', 'efTime2',
+    # "passStartTime", "passEndTime", 
+    'netDeploymentTime', 
+    'scientificName', 'taxonID', 'passNumber', 'taxonRank', 'targetTaxaPresent')
   
+  my_grouping_vars <- dplyr::intersect(
+    my_grouping_vars,
+    names(fsh_dat_fine))
+  # added a few metrics to quantify catch per unit effort such as 'passNumber', efish time, net deployment time
+  
+  
+  
+  # aggregate densities for each species group, pull out year and month from StartDate
   fsh_dat_aggregate <- fsh_dat_fine %>%
-    dplyr::select(!!c(dplyr::all_of(my_grouping_vars), 'count')) %>%
+    dplyr::select(dplyr::all_of(c(my_grouping_vars, 'count'))) %>%
     dplyr::group_by_at(dplyr::vars(dplyr::all_of(my_grouping_vars))) %>%
     dplyr::summarize(
       number_of_fish = sum(count),
       n_obs = dplyr::n()) %>%
     dplyr::mutate(
       year = startDate %>% lubridate::year(),
-      month = startDate %>% lubridate::month()
-    ) %>% dplyr::ungroup()
+      month = startDate %>% lubridate::month()) %>% 
+    dplyr::ungroup()
+  
+  
+  #### there should not be dups at this point
+  #### check for dups
+  
+  dup_counts <- fsh_dat_aggregate %>%
+    group_by(taxonID, eventID) %>%
+    summarize(
+      n_agg_count_vals = n(),
+      agg_count_vals = paste(number_of_fish, collapse = "|"),
+      n_obs_vals = paste(n_obs, collapse = "|")
+    )
+  
+  dups <- dup_counts %>%
+    filter(n_agg_count_vals > 1)
+  
+  
+  
+  
   
   
   # some aquaticSiteType are NA, replace NAs if-based wildcarding namedLocation
@@ -181,9 +233,15 @@ map_neon.ecocomdp.20107.001.001 <- function(
   # sampler type is also missing in a few cases, reaplace from eventID, with a wildcard
   fsh_dat_aggregate$samplerType <- dplyr::if_else(
     is.na(fsh_dat_aggregate$samplerType),
-    dplyr::if_else(grepl("e-fisher", fsh_dat_aggregate$eventID), 'electrofisher',
-                   dplyr::if_else(grepl("gill", fsh_dat_aggregate$eventID), 'gill net', 'mini-fyke net')),
+    dplyr::if_else(
+      grepl("e-fisher", fsh_dat_aggregate$eventID), 
+      'electrofisher',
+      dplyr::if_else(grepl("gill", fsh_dat_aggregate$eventID), 
+                     'gill net', 'mini-fyke net')),
     fsh_dat_aggregate$samplerType)
+  
+  
+  
   
   
   # make sure that e-fish samples have "" or NA for netset and netend times, this will leave actual missing data as na
@@ -203,10 +261,18 @@ map_neon.ecocomdp.20107.001.001 <- function(
         true = NA_character_, false = as.character(netEndTime)),
       netDeploymentTime = dplyr::case_when(
         samplerType == grepl("electrofish", samplerType) ~ netDeploymentTime,
-        is.na(netDeploymentTime) ~ as.numeric(difftime(netEndTime, netSetTime, tz = "GMT", units = "hours")),
+        is.na(netDeploymentTime) ~ as.numeric(difftime(
+          netEndTime, netSetTime, tz = "GMT", units = "hours")),
         TRUE ~ netDeploymentTime),
-      mean_efishtime = base::rowMeans(dplyr::select(., c("efTime", "efTime2")), na.rm = T),
-      mean_efishtime = dplyr::case_when(mean_efishtime == 0 ~ NA_real_,TRUE ~ mean_efishtime))
+      mean_efishtime = base::rowMeans(
+        dplyr::select(., c("efTime", "efTime2")), na.rm = T),
+      mean_efishtime = dplyr::case_when(
+        mean_efishtime == 0 ~ NA_real_,
+        TRUE ~ mean_efishtime))
+  
+  
+  
+  
   
   # with the above changes, we have efish time and and net duration to calculate 
   # catch per unit effort before moving to wide format
@@ -219,35 +285,50 @@ map_neon.ecocomdp.20107.001.001 <- function(
       catch_per_effort = dplyr::if_else(
         condition = samplerType ==  "electrofisher" | samplerType == "two electrofishers",
         true = number_of_fish/mean_efishtime * 3600,
-        false = dplyr::if_else(condition = samplerType ==  "mini-fyke net" | samplerType == "gill net",
-                               true = number_of_fish/netDeploymentTime * 24, false = as.numeric(NA))))
-  
-  # make wide for total observations without catch per unit efforts
-  fsh_dat_wide_total.obs <- data_fish %>%
-    dplyr::group_by(
-      year, month, siteID, namedLocation, reachID, fixedRandomReach, 
-      aquaticSiteType, samplerType, targetTaxaPresent ) %>%
-    tidyr::pivot_wider(
-      names_from = scientificName, 
-      values_from = number_of_fish, 
-      names_repair = "unique",  
-      values_fill = 0, 
-      names_sep = "_") %>%
-    dplyr::select(-n_obs, -catch_per_effort) # these two cols are misleading in this wide format
+        false = dplyr::if_else(
+          condition = samplerType ==  "mini-fyke net" | samplerType == "gill net",
+          true = number_of_fish/netDeploymentTime * 24, 
+          false = as.numeric(NA))))
   
   
+  
+  
+  # is this necessary? fielddata was prevoiusly joined
   data_fish = dplyr::left_join(
     data_fish, 
-    unique(dplyr::select(
-      all_fish$fsh_fieldData, namedLocation, decimalLatitude,
-      decimalLongitude, coordinateUncertainty, geodeticDatum,
-      elevation, elevationUncertainty)),
-    by = "namedLocation")
+    all_fish$fsh_fieldData %>% 
+      dplyr::select(
+        namedLocation, decimalLatitude, decimalLongitude, 
+        geodeticDatum, elevation),
+    by = "namedLocation",
+    multiple = "all") %>%
+    dplyr::filter(!is.na(taxonID)) %>%
+    dplyr::distinct() %>%
+    
+    # remove invalid records
+    dplyr::filter(
+      is.finite(catch_per_effort),
+      catch_per_effort >= 0,
+      !is.na(catch_per_effort))
   
-  data_fish = dplyr::filter(data_fish, !is.na(taxonID)) %>%
-    dplyr::distinct()
   
- 
+  # #### there should not be dups at this point
+  # #### check for dups
+  # 
+  # dup_counts <- data_fish %>%
+  #   group_by(taxonID, eventID) %>%
+  #   summarize(
+  #     n_cpue_vals = n(),
+  #     cpue_vals = paste(catch_per_effort, collapse = "|"))
+  # 
+  # dups <- dup_counts %>%
+  #   filter(n_cpue_vals > 1)
+  # 
+  # print(dups)
+  
+  
+  
+  
   #location ----
   table_location_raw <- data_fish %>%
     dplyr::select(domainID, siteID, namedLocation, 
@@ -300,9 +381,6 @@ map_neon.ecocomdp.20107.001.001 <- function(
       unit = "catch per unit effort") 
   
   
-
-  
-  
   table_observation <- table_observation_wide_all %>%
     dplyr::select(
       observation_id,
@@ -317,7 +395,7 @@ map_neon.ecocomdp.20107.001.001 <- function(
     dplyr::filter(!is.na(taxon_id))
   
   
-
+  
   
   table_observation_ancillary <- make_neon_ancillary_observation_table(
     obs_wide = table_observation_wide_all,

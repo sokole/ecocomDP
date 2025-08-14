@@ -1,3 +1,29 @@
+# ecocomDP 1.3.2
+
+## Fixes
+* Improved ping_edi() function to gracefully handle network errors and disabled network-dependent tests to align with CRAN policies and prevent CRAN check issues. See issue [#154](https://github.com/EDIorg/ecocomDP/issues/154).
+
+# ecocomDP 1.3.1
+
+## Fixes
+* Resolved rate limiting errors in ping_edi() triggered by recent updates to the rate limiting mechanism in the EDI data repository and due to the lack of rate limiting procedures in the ecocomDP R package.
+
+# ecocomDP 1.3.0
+
+## Fixes
+* Fixed and cleaned up NEON data mapping functions to work with latest NEON data release, return abundance values that are finite and non-negative.
+* Added code to resolve duplicate taxon counts within sample/event IDs for NEON data.
+
+## Enhancements
+* Updated plotting functions.
+
+# ecocomDP 1.2.2
+
+## Fixes
+* Fix NEON mosquito mapping error in internal function `map_neon.ecocomdp.10043.001.001` that resulted from an update to the NEON "Mosquitoes sampled from CO2 traps" (DP1.10043.001) data model that affects the 2022 data release (and later). The fix is backwards compatible to older NEON data releases and also fixes a problem that resulted in pulling duplicate records from the mos_archivepooling table (archive records are no longer accessed using ecocomDP).
+* Fix vulnerability to absence of retiring r-spatial packages. See issue [#147](https://github.com/EDIorg/ecocomDP/issues/147).
+* Relax constraints on minimum version requirements. See commit [f2bdb91a4e1a3b633ebed3bffbf1773ac8565e80](https://github.com/EDIorg/ecocomDP/commit/f2bdb91a4e1a3b633ebed3bffbf1773ac8565e80).
+
 # ecocomDP 1.2.1
 
 ## Fixes
